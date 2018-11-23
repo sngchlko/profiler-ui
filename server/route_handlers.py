@@ -28,6 +28,7 @@ from tensorflow import gfile
 from tensorflow.python import pywrap_tensorflow as pwtf
 from tensorflow.python.profiler import model_analyzer
 from tensorflow.python.profiler import profile_context
+from tensorflow.core.profiler import tfprof_output_pb2
 
 
 def handle_loading_page():
@@ -49,6 +50,22 @@ def handle_profile_api():
     options['view'] = 'code'
   elif options['view'] == 'graph':
     output_format = 'timeline'
+  elif options['view'] == 'advise':
+    opts = model_analyzer._build_advisor_options(model_analyzer.ALL_ADVICE)
+    advise = pwtf.Profile(options['view'].encode('utf-8'), opts.SerializeToString())
+
+    advise_pb = tfprof_output_pb2.AdviceProto()
+    advise_pb.ParseFromString(advise)
+
+    s = ''
+    for key in advise_pb.checkers:
+        s = s + key + ':\n'
+        for report in advise_pb.checkers[key].reports:
+            for line in report.splitlines():
+                s = s + '  ' + line + '\n'
+        s = s + '\n'
+
+    return flask.make_response(s, 200)
   else:
     output_format = 'file'
 
